@@ -18,8 +18,20 @@ interface HomeScreenProps {
   onStartAnalysis: (video: VideoInfo) => void;
 }
 
+const TARGET_SHOT_OPTIONS: { key: ShotKey | 'auto'; label: string; icon: string }[] = [
+  { key: 'auto', label: 'Auto-Detectie', icon: 'sparkles' },
+  { key: 'jump_smash', label: 'Jump Smash', icon: 'flash' },
+  { key: 'forehand_smash', label: 'Forehand Smash', icon: 'flame' },
+  { key: 'overhead_clear', label: 'Overhead Clear', icon: 'cloud-upload' },
+  { key: 'slice_drop', label: 'Dropshot', icon: 'leaf' },
+  { key: 'backhand_smash', label: 'Backhand Smash', icon: 'rocket' },
+  { key: 'backhand_clear', label: 'Backhand Clear', icon: 'arrow-up-circle' },
+  { key: 'flat_drive', label: 'Vlakke Drive', icon: 'speedometer' },
+];
+
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [targetShot, setTargetShot] = useState<ShotKey | 'auto'>('auto');
   const [selectedPreset, setSelectedPreset] = useState<ShotKey>('jump_smash');
 
   /**
@@ -54,12 +66,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
           name: asset.fileName || 'Opgenomen Badmintonslag',
           duration: asset.duration || 5,
           source: 'camera',
-          // Geen samplePreset: het echte computervisiemodel moet de video analyseren!
+          targetShot,
         });
       }
     } catch (error: any) {
       console.error('Camera error:', error);
-      Alert.alert('Camerafout', 'Kon de camera niet openen. Je kunt hieronder ook een voorbeeldfoto kiezen.');
+      Alert.alert('Camerafout', 'Kon de camera niet openen.');
     } finally {
       setIsProcessing(false);
     }
@@ -96,7 +108,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
           name: asset.fileName || 'Geüploade Badmintonvideo',
           duration: asset.duration || 5,
           source: 'upload',
-          // Geen samplePreset: het echte computervisiemodel moet de video analyseren!
+          targetShot,
         });
       }
     } catch (error: any) {
@@ -119,6 +131,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
       duration: 4,
       source: 'sample',
       samplePreset: presetKey,
+      targetShot: presetKey,
     });
   };
 
@@ -151,9 +164,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
           <View style={styles.containerHeaderText}>
             <Text style={styles.containerTitle}>Slag Video Invoer</Text>
             <Text style={styles.containerSubtitle}>
-              Neem een nieuwe slag op of upload een bestaande badmintonvideo
+              Neem een nieuwe slag op of upload een bestaande video
             </Text>
           </View>
+        </View>
+
+        {/* Slagdoel / Detectiemodus Keuzebalk */}
+        <View style={styles.targetShotSection}>
+          <Text style={styles.targetShotLabel}>Gewenst analyseprofiel:</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.targetShotList}
+          >
+            {TARGET_SHOT_OPTIONS.map((opt) => {
+              const active = targetShot === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.targetPill, active && styles.targetPillActive]}
+                  onPress={() => setTargetShot(opt.key)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={opt.icon as any}
+                    size={14}
+                    color={active ? Colors.background : Colors.primaryLight}
+                  />
+                  <Text style={[styles.targetPillText, active && styles.targetPillTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {isProcessing ? (
@@ -202,7 +246,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
         <View style={styles.shuttlecockNotice}>
           <Ionicons name="information-circle" size={16} color={Colors.textMuted} />
           <Text style={styles.shuttlecockNoticeText}>
-            Zorg voor de hoogste AI-nauwkeurigheid dat de speler die de shuttle raakt volledig in beeld is.
+            De AI analyseert automatisch de armzwaai en snelheid. Tip: selecteer &apos;Jump Smash&apos; hierboven als je specifiek je smash wilt beoordelen.
           </Text>
         </View>
       </View>
@@ -212,10 +256,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleRow}>
             <Ionicons name="flash" size={18} color={Colors.accentVolt} />
-            <Text style={styles.sectionTitle}>Analyseer Specifieke Slagen</Text>
+            <Text style={styles.sectionTitle}>Directe Demonstratieslagen</Text>
           </View>
           <Text style={styles.sectionSubtitle}>
-            Jump smash, backhand smash, backhand drop, clear & meer
+            Bekijk direct de biomechanische analyse van een specifieke techniek
           </Text>
         </View>
 
@@ -256,7 +300,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
                 </Text>
 
                 <View style={styles.presetAnalyzeButton}>
-                  <Text style={styles.presetAnalyzeText}>Analyseer Slag</Text>
+                  <Text style={styles.presetAnalyzeText}>Bekijk Analyse</Text>
                   <Ionicons name="arrow-forward" size={12} color={Colors.primary} />
                 </View>
               </TouchableOpacity>
@@ -387,6 +431,42 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: 12,
     marginTop: 2,
+  },
+  targetShotSection: {
+    marginBottom: Spacing.md,
+  },
+  targetShotLabel: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  targetShotList: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  targetPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: Colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  targetPillActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  targetPillText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  targetPillTextActive: {
+    color: Colors.background,
   },
   processingWrapper: {
     paddingVertical: Spacing.xl,

@@ -8,6 +8,7 @@ export interface VideoInfo {
   duration?: number;
   source: VideoSource;
   samplePreset?: ShotKey;
+  targetShot?: ShotKey | 'auto';
   thumbnailUri?: string;
 }
 

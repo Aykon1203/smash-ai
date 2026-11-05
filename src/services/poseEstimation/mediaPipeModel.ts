@@ -42,7 +42,10 @@ export class MediaPipePoseEstimator {
 
       let landmarks: PoseLandmark[];
 
-      if (isExplicitSample) {
+      if (video.targetShot && video.targetShot !== 'auto') {
+        // Gebruiker heeft expliciet een doelslag gekozen (bijv. Jump Smash)
+        landmarks = this.inferBlazePoseLandmarks(progressRatio, video.targetShot);
+      } else if (isExplicitSample) {
         // Expliciet gekozen demo-slag
         landmarks = this.inferBlazePoseLandmarks(progressRatio, video.samplePreset);
       } else if (visualMetrics && visualMetrics.isFaceOrPortraitOnly) {

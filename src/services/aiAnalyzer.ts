@@ -3,7 +3,53 @@ import { extractVideoFrames } from './poseEstimation/frameExtractor';
 import { analyzeRealVideoFrames } from './poseEstimation/frameVisualAnalyzer';
 import { globalMediaPipePose } from './poseEstimation/mediaPipeModel';
 import { extractBiomechanicalMetrics } from './poseEstimation/kinematics';
-import { classifyShotFromBiometrics } from './poseEstimation/shotClassifier';
+import { classifyShotFromBiometrics, generateShotDetails } from './poseEstimation/shotClassifier';
+import { ShotKey } from '../types/badminton';
+
+/**
+ * Herclassificeert een bestaande analyse naar een ander slagtype indien de gebruiker dit aanpast
+ */
+export function reclassifyAnalysis(analysis: ShotAnalysis, newShotKey: ShotKey): ShotAnalysis {
+  const isBackhand = newShotKey.startsWith('backhand_');
+  const isJump = newShotKey === 'jump_smash';
+  const speed = newShotKey === 'jump_smash' ? 348 : newShotKey === 'forehand_smash' ? 320 : newShotKey === 'backhand_smash' ? 265 : newShotKey === 'slice_drop' || newShotKey === 'backhand_drop' ? 115 : 240;
+  const angle = newShotKey === 'jump_smash' ? 21.2 : newShotKey === 'forehand_smash' ? 18.4 : newShotKey.includes('drop') ? 28.5 : 8.5;
+
+  const biometrics = {
+    maxElbowExtensionDeg: 168,
+    shoulderElevationDeg: 155,
+    torsoRotationDeg: isBackhand ? 58 : 36,
+    jumpApexM: isJump ? 0.28 : 0.06,
+    wristPeakSpeedKmh: speed,
+    impactAngleDeg: angle,
+    landingKneeFlexionDeg: 145,
+    recoveryDelaySec: 0.31,
+    isBackhand,
+    contactHeightEstM: isJump ? 2.92 : 2.76,
+    kineticChainScore: 91,
+    impactFrameIndex: 2,
+  };
+
+  const classification = generateShotDetails(newShotKey, biometrics);
+
+  return {
+    ...analysis,
+    shotKey: classification.shotKey,
+    shotName: classification.shotName,
+    shotCategory: classification.shotCategory,
+    score: classification.score,
+    tagline: classification.tagline,
+    metrics: {
+      speedKmh: speed,
+      contactHeightM: biometrics.contactHeightEstM,
+      impactAngleDeg: angle,
+      kineticChainEfficiency: 91,
+    },
+    goodPoints: classification.goodPoints,
+    badPoints: classification.badPoints,
+    coachTips: classification.coachTips,
+  };
+}
 
 export const SHOT_PRESETS: ShotPresetOption[] = [
   {

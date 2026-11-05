@@ -8,10 +8,11 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../constants/theme';
-import { ShotAnalysis } from '../types/badminton';
+import { ShotAnalysis, ShotKey } from '../types/badminton';
 import { MetricCard } from '../components/MetricCard';
 import { FeedbackCard } from '../components/FeedbackCard';
 import { exportFeedback } from '../services/exportService';
+import { reclassifyAnalysis, SHOT_PRESETS } from '../services/aiAnalyzer';
 
 interface ResultScreenProps {
   analysis: ShotAnalysis;
@@ -20,11 +21,14 @@ interface ResultScreenProps {
 }
 
 export const ResultScreen: React.FC<ResultScreenProps> = ({
-  analysis,
+  analysis: initialAnalysis,
   onRecordNewVideo,
   onNavigateHome,
 }) => {
+  const [analysis, setAnalysis] = useState<ShotAnalysis>(initialAnalysis);
   const [isExporting, setIsExporting] = useState(false);
+  const [showShotPicker, setShowShotPicker] = useState(false);
+
   const isInvalid = analysis.isInvalidVideo || analysis.shotCategory === 'Niet Herkend';
 
   const handleExport = async () => {
@@ -38,20 +42,26 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   };
 
+  const handleSwitchShot = (newShotKey: ShotKey) => {
+    const updated = reclassifyAnalysis(analysis, newShotKey);
+    setAnalysis(updated);
+    setShowShotPicker(false);
+  };
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* Waarschuwingsbanner bij ongeldige opname (bijv. enkel een gezicht) */}
+      {/* Waarschuwingsbanner bij ongeldige opname */}
       {isInvalid && (
         <View style={styles.warningBanner}>
           <Ionicons name="alert-circle" size={20} color={Colors.warning} />
           <View style={styles.warningBannerText}>
             <Text style={styles.warningTitle}>Geen Badmintonslag Herkend</Text>
             <Text style={styles.warningSub}>
-              De AI heeft geen zwaai of volledig lichaam gedetecteerd. Bekijk onderstaande instructies voor een juiste opname.
+              De AI heeft geen zwaai of beweging waargenomen. Bekijk de instructies voor een juiste camera-opstelling.
             </Text>
           </View>
         </View>
@@ -85,10 +95,51 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           </View>
         </View>
 
-        {/* Slagnaam & Samenvatting */}
-        <Text style={[styles.shotTitle, isInvalid && { color: Colors.warning }]}>
-          {analysis.shotName}
-        </Text>
+        {/* Slagnaam & Wijzigen knop */}
+        <View style={styles.titleRow}>
+          <Text style={[styles.shotTitle, isInvalid && { color: Colors.warning }]}>
+            {analysis.shotName}
+          </Text>
+          {!isInvalid && (
+            <TouchableOpacity
+              style={styles.switchShotBtn}
+              onPress={() => setShowShotPicker(!showShotPicker)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="swap-horizontal" size={14} color={Colors.primaryLight} />
+              <Text style={styles.switchShotBtnText}>Aanpassen</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Slag Wijzigen Carousel */}
+        {showShotPicker && (
+          <View style={styles.shotPickerCard}>
+            <Text style={styles.shotPickerTitle}>Selecteer de daadwerkelijk geslagen slag:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shotPickerList}>
+              {SHOT_PRESETS.map((preset) => {
+                const isCurrent = analysis.shotKey === preset.key;
+                return (
+                  <TouchableOpacity
+                    key={preset.key}
+                    style={[styles.pickerPill, isCurrent && styles.pickerPillActive]}
+                    onPress={() => handleSwitchShot(preset.key)}
+                  >
+                    <Ionicons
+                      name={preset.icon as any}
+                      size={14}
+                      color={isCurrent ? Colors.background : Colors.primary}
+                    />
+                    <Text style={[styles.pickerPillText, isCurrent && styles.pickerPillTextActive]}>
+                      {preset.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         <Text style={styles.shotTagline}>{analysis.tagline}</Text>
 
         <View style={styles.shotMetaRow}>
@@ -347,12 +398,76 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '800',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 6,
+  },
   shotTitle: {
+    flex: 1,
     color: Colors.text,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     letterSpacing: -0.5,
-    marginBottom: 6,
+  },
+  switchShotBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: Colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  switchShotBtnText: {
+    color: Colors.primaryLight,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  shotPickerCard: {
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 12,
+    padding: 10,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  shotPickerTitle: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  shotPickerList: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  pickerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  pickerPillActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  pickerPillText: {
+    color: Colors.textSecondary,
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  pickerPillTextActive: {
+    color: Colors.background,
   },
   shotTagline: {
     color: Colors.textSecondary,
