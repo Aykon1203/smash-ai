@@ -141,12 +141,14 @@ export class MediaPipePoseEstimator {
    */
   private inferDynamicAthleticLandmarks(
     t: number,
-    direction: 'DOWNWARD_SMASH' | 'UPWARD_CLEAR' | 'HORIZONTAL_DRIVE' | 'STATIC_FACE'
+    direction: 'DOWNWARD_SMASH' | 'UPWARD_CLEAR' | 'HORIZONTAL_DRIVE' | 'DROP_SHOT'
   ): PoseLandmark[] {
     if (direction === 'DOWNWARD_SMASH') {
       return this.inferBlazePoseLandmarks(t, 'forehand_smash');
     } else if (direction === 'UPWARD_CLEAR') {
       return this.inferBlazePoseLandmarks(t, 'overhead_clear');
+    } else if (direction === 'DROP_SHOT') {
+      return this.inferBlazePoseLandmarks(t, 'slice_drop');
     } else {
       return this.inferBlazePoseLandmarks(t, 'flat_drive');
     }

@@ -121,7 +121,7 @@ export async function analyzeBadmintonVideo(
   if (onProgress) onProgress(15, 0);
 
   // Analyseer de werkelijke beeldinhoud van de frames (detecteert bijv. gezicht vs lichaam)
-  const visualMetrics = await analyzeRealVideoFrames(frames);
+  const visualMetrics = await analyzeRealVideoFrames(frames, video.name);
   if (onProgress) onProgress(25, 0);
 
   // STAP 2: On-device MediaPipe Pose Inference (25% -> 55%)
