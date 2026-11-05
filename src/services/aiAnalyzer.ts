@@ -177,7 +177,7 @@ export async function analyzeBadmintonVideo(
 
   // STAP 3: Kinematica & Gewrichtshoeken Berekenen (55% -> 80%)
   if (onProgress) onProgress(65, 2);
-  const biometrics = extractBiomechanicalMetrics(poseSequence);
+  const biometrics = extractBiomechanicalMetrics(poseSequence, visualMetrics);
   if (onProgress) onProgress(80, 2);
 
   // STAP 4: Slag Classificeren & Biomechanische Feedback Genereren (80% -> 100%)

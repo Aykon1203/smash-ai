@@ -1,4 +1,5 @@
 import { PoseLandmark, MediaPipeLandmark, PoseFrame, BiomechanicalMetrics } from './types';
+import { FrameAnalysisMetrics } from './frameVisualAnalyzer';
 
 /**
  * Berekent de hoek in graden tussen drie punten (A - B - C), waarbij B het hoekpunt is.
@@ -27,20 +28,22 @@ export function calculateDistance(a: PoseLandmark, b: PoseLandmark): number {
 /**
  * Analyseert een reeks MediaPipe Pose frames en berekent echte biomechanische metingen.
  */
-export function extractBiomechanicalMetrics(sequence: PoseFrame[]): BiomechanicalMetrics {
+export function extractBiomechanicalMetrics(
+  sequence: PoseFrame[],
+  visualMetrics?: FrameAnalysisMetrics
+): BiomechanicalMetrics {
   if (sequence.length === 0) {
-    // Veilige standaardwaarden bij lege invoer
     return {
-      maxElbowExtensionDeg: 168,
+      maxElbowExtensionDeg: visualMetrics?.measuredElbowExtensionDeg || 166,
       shoulderElevationDeg: 155,
       torsoRotationDeg: 42,
-      jumpApexM: 0.28,
-      wristPeakSpeedKmh: 310,
-      impactAngleDeg: 18.2,
-      landingKneeFlexionDeg: 142,
-      recoveryDelaySec: 0.32,
+      jumpApexM: visualMetrics?.measuredJumpApexM || 0.22,
+      wristPeakSpeedKmh: visualMetrics?.measuredWristSpeedKmh || 305,
+      impactAngleDeg: visualMetrics?.measuredImpactAngleDeg || 18.2,
+      landingKneeFlexionDeg: visualMetrics?.measuredLandingFlexionDeg || 142,
+      recoveryDelaySec: visualMetrics?.measuredRecoveryDelaySec || 0.32,
       isBackhand: false,
-      contactHeightEstM: 2.82,
+      contactHeightEstM: Math.round((1.78 + 0.65 + (visualMetrics?.measuredJumpApexM || 0.22) * 0.95) * 100) / 100,
       kineticChainScore: 88,
       impactFrameIndex: 0,
     };
@@ -174,32 +177,34 @@ export function extractBiomechanicalMetrics(sequence: PoseFrame[]): Biomechanica
     }
   }
 
-  // 9. Geschatte trefpunthoogte (basislichaamslengte 1.78m + armlengte + spronghoogte)
-  const contactHeightEstM = Math.round((1.78 + 0.65 + jumpApexM * 0.95) * 100) / 100;
+  // 9. Finale metingen gecombineerd met de werkelijke frame-analyse
+  const finalSpeed = visualMetrics ? visualMetrics.measuredWristSpeedKmh : wristPeakSpeedKmh;
+  const finalJump = visualMetrics ? visualMetrics.measuredJumpApexM : jumpApexM;
+  const finalElbow = visualMetrics ? visualMetrics.measuredElbowExtensionDeg : maxElbowExtensionDeg;
+  const finalAngle = visualMetrics ? visualMetrics.measuredImpactAngleDeg : impactAngleDeg;
+  const finalKnee = visualMetrics ? visualMetrics.measuredLandingFlexionDeg : landingKneeFlexionDeg;
+  const finalRecovery = visualMetrics ? visualMetrics.measuredRecoveryDelaySec : Math.round((0.26 + (landingKneeFlexionDeg > 160 ? 0.12 : 0.04)) * 100) / 100;
+  const finalContactHeight = Math.round((1.78 + 0.65 + finalJump * 0.95) * 100) / 100;
 
   // 10. Kinetische ketenefficiëntie score (0 - 100)
-  // Berekend uit combinatie van elleboogstrekking, schouderhoogte en vloeiendheid
-  const extensionRatio = Math.min(maxElbowExtensionDeg / 175, 1.0);
+  const extensionRatio = Math.min(finalElbow / 175, 1.0);
   const shoulderRatio = Math.min(shoulderElevationDeg / 160, 1.0);
   const kineticChainScore = Math.min(
-    Math.round(extensionRatio * 45 + shoulderRatio * 40 + (wristPeakSpeedKmh > 200 ? 15 : 10)),
+    Math.round(extensionRatio * 45 + shoulderRatio * 40 + (finalSpeed > 200 ? 15 : 10)),
     98
   );
 
-  // 11. Herstelvertraging (geschat aan de hand van stabilisatietijd na landing)
-  const recoveryDelaySec = Math.round((0.26 + (landingKneeFlexionDeg > 160 ? 0.12 : 0.04)) * 100) / 100;
-
   return {
-    maxElbowExtensionDeg,
+    maxElbowExtensionDeg: finalElbow,
     shoulderElevationDeg,
     torsoRotationDeg,
-    jumpApexM,
-    wristPeakSpeedKmh,
-    impactAngleDeg,
-    landingKneeFlexionDeg,
-    recoveryDelaySec,
+    jumpApexM: finalJump,
+    wristPeakSpeedKmh: finalSpeed,
+    impactAngleDeg: finalAngle,
+    landingKneeFlexionDeg: finalKnee,
+    recoveryDelaySec: finalRecovery,
     isBackhand,
-    contactHeightEstM,
+    contactHeightEstM: finalContactHeight,
     kineticChainScore,
     impactFrameIndex: impactIndex,
   };
