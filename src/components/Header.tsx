@@ -9,6 +9,12 @@ interface HeaderProps {
   onBackToHome?: () => void;
 }
 
+const SCREEN_LABELS: Record<ScreenType, string> = {
+  Home: 'Start',
+  Loading: 'Analyseren',
+  Result: 'Resultaat',
+};
+
 export const Header: React.FC<HeaderProps> = ({ currentScreen, onBackToHome }) => {
   return (
     <View style={styles.container}>
@@ -17,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, onBackToHome }) =
           <TouchableOpacity
             style={styles.backButton}
             onPress={onBackToHome}
-            accessibilityLabel="Back to Home"
+            accessibilityLabel="Terug naar start"
           >
             <Ionicons name="chevron-back" size={22} color={Colors.text} />
           </TouchableOpacity>
@@ -31,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, onBackToHome }) =
               <Text style={styles.brandTitle}>Smash</Text>
               <Text style={styles.brandTitleAI}>AI</Text>
             </View>
-            <Text style={styles.brandSubtitle}>Badminton Shot Analyzer</Text>
+            <Text style={styles.brandSubtitle}>Badminton Slaganalyse</Text>
           </View>
         </View>
       </View>
@@ -47,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, onBackToHome }) =
               : styles.dotHome,
           ]}
         />
-        <Text style={styles.statusText}>{currentScreen}</Text>
+        <Text style={styles.statusText}>{SCREEN_LABELS[currentScreen]}</Text>
       </View>
     </View>
   );

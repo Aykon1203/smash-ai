@@ -23,7 +23,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
   const [selectedPreset, setSelectedPreset] = useState<ShotKey>('jump_smash');
 
   /**
-   * Launch native camera to record badminton video
+   * Start de native camera om een badmintonslag op te nemen
    */
   const handleRecordVideo = async () => {
     try {
@@ -32,9 +32,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
 
       if (!permissionResult.granted) {
         Alert.alert(
-          'Camera Permission Required',
-          'SmashAI requires camera access so you can record your badminton strokes for AI analysis.',
-          [{ text: 'OK' }]
+          'Cameratoegang Vereist',
+          'SmashAI heeft toegang tot je camera nodig zodat je badmintonslagen kunt opnemen voor AI-analyse.',
+          [{ text: 'Begrepen' }]
         );
         setIsProcessing(false);
         return;
@@ -51,7 +51,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
         const asset = result.assets[0];
         onStartAnalysis({
           uri: asset.uri,
-          name: asset.fileName || 'Recorded Badminton Shot',
+          name: asset.fileName || 'Opgenomen Badmintonslag',
           duration: asset.duration || 5,
           source: 'camera',
           samplePreset: selectedPreset,
@@ -59,14 +59,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
       }
     } catch (error: any) {
       console.error('Camera error:', error);
-      Alert.alert('Camera Error', 'Could not access camera. You can also try selecting a demo shot below.');
+      Alert.alert('Camerafout', 'Kon de camera niet openen. Je kunt hieronder ook een voorbeeldfoto kiezen.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   /**
-   * Upload video from device library
+   * Upload video vanuit de galerij
    */
   const handleUploadVideo = async () => {
     try {
@@ -75,9 +75,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
 
       if (!permissionResult.granted) {
         Alert.alert(
-          'Photo Library Access Required',
-          'SmashAI requires photo library access to upload your badminton video.',
-          [{ text: 'OK' }]
+          'Galerijtoegang Vereist',
+          'SmashAI heeft toegang tot je mediabibliotheek nodig om je badmintonvideo te uploaden.',
+          [{ text: 'Begrepen' }]
         );
         setIsProcessing(false);
         return;
@@ -93,7 +93,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
         const asset = result.assets[0];
         onStartAnalysis({
           uri: asset.uri,
-          name: asset.fileName || 'Uploaded Badminton Shot',
+          name: asset.fileName || 'Geüploade Badmintonvideo',
           duration: asset.duration || 5,
           source: 'upload',
           samplePreset: selectedPreset,
@@ -101,21 +101,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
       }
     } catch (error: any) {
       console.error('Picker error:', error);
-      Alert.alert('Upload Error', 'Could not open video library.');
+      Alert.alert('Uploadfout', 'Kon de mediabibliotheek niet openen.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   /**
-   * Direct trigger for sample badminton shot preset
+   * Selecteer direct een voorgedefinieerde badmintonslag
    */
   const handleSelectSamplePreset = (presetKey: ShotKey) => {
     setSelectedPreset(presetKey);
     const preset = SHOT_PRESETS.find((p) => p.key === presetKey);
     onStartAnalysis({
       uri: `mock://badminton/${presetKey}.mp4`,
-      name: `${preset?.name || presetKey} Demo Video`,
+      name: `${preset?.name || presetKey} Demovideo`,
       duration: 4,
       source: 'sample',
       samplePreset: presetKey,
@@ -134,13 +134,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
           <MaterialCommunityIcons name="badminton" size={14} color={Colors.primary} />
           <Text style={styles.categoryBadgeText}>AI BADMINTON VISION LAB</Text>
         </View>
-        <Text style={styles.heroTitle}>Master Your Badminton Strokes</Text>
+        <Text style={styles.heroTitle}>Perfectioneer Je Badmintonslagen</Text>
         <Text style={styles.heroDescription}>
-          Capture your swing, let the AI calculate racket velocity, impact angle, and receive instant biomechanical feedback.
+          Film of upload je slag om direct je racketsnelheid, trefpunthoogte, impacthoek en slagbiomechanica te analyseren met AI.
         </Text>
       </View>
 
-      {/* Main Video Capture / Upload Container */}
+      {/* Centrale Video Invoer Container */}
       <View style={styles.mainContainer}>
         <View style={styles.containerGlow} />
 
@@ -149,9 +149,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
             <MaterialCommunityIcons name="badminton" size={26} color={Colors.primary} />
           </View>
           <View style={styles.containerHeaderText}>
-            <Text style={styles.containerTitle}>Shot Video Input</Text>
+            <Text style={styles.containerTitle}>Slag Video Invoer</Text>
             <Text style={styles.containerSubtitle}>
-              Record fresh footage or upload an existing badminton clip
+              Neem een nieuwe slag op of upload een bestaande badmintonvideo
             </Text>
           </View>
         </View>
@@ -159,41 +159,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
         {isProcessing ? (
           <View style={styles.processingWrapper}>
             <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.processingText}>Preparing video...</Text>
+            <Text style={styles.processingText}>Video voorbereiden...</Text>
           </View>
         ) : (
           <View style={styles.actionButtonsRow}>
-            {/* Record Camera Button */}
+            {/* Knop: Video Opnemen */}
             <TouchableOpacity
               style={[styles.actionButton, styles.recordButton]}
               onPress={handleRecordVideo}
               activeOpacity={0.85}
-              accessibilityLabel="Record badminton video"
+              accessibilityLabel="Badminton video opnemen"
             >
               <View style={styles.recordIconRing}>
                 <Ionicons name="videocam" size={24} color={Colors.white} />
               </View>
-              <Text style={styles.actionButtonTitle}>Record Video</Text>
-              <Text style={styles.actionButtonDesc}>Open camera for swing</Text>
+              <Text style={styles.actionButtonTitle}>Video Opnemen</Text>
+              <Text style={styles.actionButtonDesc}>Open camera voor slag</Text>
               <View style={styles.activeTag}>
                 <Text style={styles.activeTagText}>Camera</Text>
               </View>
             </TouchableOpacity>
 
-            {/* Upload Video Button */}
+            {/* Knop: Video Uploaden */}
             <TouchableOpacity
               style={[styles.actionButton, styles.uploadButton]}
               onPress={handleUploadVideo}
               activeOpacity={0.85}
-              accessibilityLabel="Upload badminton video"
+              accessibilityLabel="Badminton video uploaden"
             >
               <View style={styles.uploadIconRing}>
                 <Ionicons name="cloud-upload" size={24} color={Colors.primary} />
               </View>
-              <Text style={styles.actionButtonTitle}>Upload Video</Text>
-              <Text style={styles.actionButtonDesc}>Select from gallery</Text>
+              <Text style={styles.actionButtonTitle}>Video Uploaden</Text>
+              <Text style={styles.actionButtonDesc}>Kies uit galerij</Text>
               <View style={[styles.activeTag, styles.uploadTag]}>
-                <Text style={[styles.activeTagText, styles.uploadTagText]}>Gallery</Text>
+                <Text style={[styles.activeTagText, styles.uploadTagText]}>Galerij</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -202,20 +202,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
         <View style={styles.shuttlecockNotice}>
           <Ionicons name="information-circle" size={16} color={Colors.textMuted} />
           <Text style={styles.shuttlecockNoticeText}>
-            For best accuracy, capture the player hitting the shuttlecock in full frame.
+            Zorg voor de hoogste AI-nauwkeurigheid dat de speler die de shuttle raakt volledig in beeld is.
           </Text>
         </View>
       </View>
 
-      {/* Badminton Shot Presets Library */}
+      {/* Badminton Slagen Bibliotheek */}
       <View style={styles.presetsSection}>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleRow}>
             <Ionicons name="flash" size={18} color={Colors.accentVolt} />
-            <Text style={styles.sectionTitle}>Analyze Specific Shot Types</Text>
+            <Text style={styles.sectionTitle}>Analyseer Specifieke Slagen</Text>
           </View>
           <Text style={styles.sectionSubtitle}>
-            Jump smash, backhand smash, backhand drop, clear & more
+            Jump smash, backhand smash, backhand drop, clear & meer
           </Text>
         </View>
 
@@ -256,7 +256,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
                 </Text>
 
                 <View style={styles.presetAnalyzeButton}>
-                  <Text style={styles.presetAnalyzeText}>Analyze Shot</Text>
+                  <Text style={styles.presetAnalyzeText}>Analyseer Slag</Text>
                   <Ionicons name="arrow-forward" size={12} color={Colors.primary} />
                 </View>
               </TouchableOpacity>
@@ -265,29 +265,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
         </View>
       </View>
 
-      {/* Recording Tips & Guidelines Card */}
+      {/* Opnametips & Richtlijnen */}
       <View style={styles.tipsCard}>
         <View style={styles.tipsHeader}>
           <Ionicons name="bulb-outline" size={20} color={Colors.accentVolt} />
-          <Text style={styles.tipsTitle}>Tips For Peak AI Accuracy</Text>
+          <Text style={styles.tipsTitle}>Tips Voor De Beste AI-Nauwkeurigheid</Text>
         </View>
         <View style={styles.tipsList}>
           <View style={styles.tipItem}>
             <Text style={styles.tipBullet}>1.</Text>
             <Text style={styles.tipText}>
-              <Text style={styles.tipHighlight}>Side Court View:</Text> Position phone 3 to 4 meters away at roughly shoulder height.
+              <Text style={styles.tipHighlight}>Zijaanzicht Baan:</Text> Plaats de camera op 3 tot 4 meter afstand op schouderhoogte.
             </Text>
           </View>
           <View style={styles.tipItem}>
             <Text style={styles.tipBullet}>2.</Text>
             <Text style={styles.tipText}>
-              <Text style={styles.tipHighlight}>Full Body in Frame:</Text> Capture both feet during jump takeoff and full racket follow-through.
+              <Text style={styles.tipHighlight}>Volledig Lichaam in Beeld:</Text> Breng zowel de voetafzet bij de sprong als de volledige uitzwaai in beeld.
             </Text>
           </View>
           <View style={styles.tipItem}>
             <Text style={styles.tipBullet}>3.</Text>
             <Text style={styles.tipText}>
-              <Text style={styles.tipHighlight}>Clean Impact:</Text> Film at 60fps or standard speed with good court lighting.
+              <Text style={styles.tipHighlight}>Zuivere Impact:</Text> Film met 60fps of standaardsnelheid bij goede halverlichting.
             </Text>
           </View>
         </View>

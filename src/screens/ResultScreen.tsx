@@ -5,8 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Share,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../constants/theme';
@@ -45,7 +43,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* Top Shot Header Banner */}
+      {/* Bovensectie: Slag Header Kaart */}
       <View style={styles.shotHeaderCard}>
         <View style={styles.cardGlow} />
 
@@ -57,11 +55,11 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 
           <View style={styles.scorePill}>
             <Ionicons name="trophy" size={13} color={Colors.accentVolt} />
-            <Text style={styles.scoreText}>Technique: {analysis.score}/100</Text>
+            <Text style={styles.scoreText}>Techniek: {analysis.score}/100</Text>
           </View>
         </View>
 
-        {/* Shot Name (Prominently displayed) */}
+        {/* Slagnaam & Samenvatting */}
         <Text style={styles.shotTitle}>{analysis.shotName}</Text>
         <Text style={styles.shotTagline}>{analysis.tagline}</Text>
 
@@ -74,31 +72,31 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           <View style={styles.metaItem}>
             <Ionicons name="videocam-outline" size={13} color={Colors.textMuted} />
             <Text style={styles.metaText}>
-              {analysis.video.name || 'Badminton Video'}
+              {analysis.video.name || 'Badmintonvideo'}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Biomechanical Metric Tiles */}
+      {/* Biomechanische Metrieken Rooster */}
       <View style={styles.metricsSection}>
-        <Text style={styles.sectionHeaderTitle}>Biomechanical Analysis</Text>
+        <Text style={styles.sectionHeaderTitle}>Biomechanische Analyse</Text>
 
         <View style={styles.metricsGrid}>
           <MetricCard
             iconName="speedometer"
-            label="Estimated Speed"
+            label="Geschatte Snelheid"
             value={analysis.metrics.speedKmh}
-            unit="km/h"
-            badge={analysis.metrics.speedKmh > 300 ? 'Elite' : 'Solid'}
+            unit="km/u"
+            badge={analysis.metrics.speedKmh > 300 ? 'Elite' : 'Goed'}
             accentColor={Colors.accentVolt}
           />
           <MetricCard
             iconName="trending-up"
-            label="Contact Height"
+            label="Raakpunthoogte"
             value={analysis.metrics.contactHeightM}
             unit="m"
-            badge="Peak"
+            badge="Piek"
             accentColor={Colors.primary}
           />
         </View>
@@ -106,38 +104,38 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         <View style={[styles.metricsGrid, { marginTop: 10 }]}>
           <MetricCard
             iconName="navigate"
-            label="Downward Angle"
+            label="Neerwaartse Hoek"
             value={`${analysis.metrics.impactAngleDeg}°`}
-            badge="Steep"
+            badge="Steil"
             accentColor={Colors.accentOrange}
           />
           <MetricCard
             iconName="analytics"
-            label="Kinetic Chain"
+            label="Kinetische Keten"
             value={`${analysis.metrics.kineticChainEfficiency}%`}
-            badge="Fluid"
+            badge="Vloeiend"
             accentColor={Colors.accentBlue}
           />
         </View>
       </View>
 
-      {/* GOOD POINTS CONTAINER */}
+      {/* GOEDE PUNTEN CONTAINER */}
       <FeedbackCard
         type="good"
-        title="Good Points (Technique Strengths)"
-        subtitle="Key biomechanical elements executed effectively"
+        title="Goede punten (Sterke techniek)"
+        subtitle="Belangrijke biomechanische aspecten die uitstekend werden uitgevoerd"
         items={analysis.goodPoints}
       />
 
-      {/* BAD POINTS CONTAINER */}
+      {/* VERBETERPUNTEN CONTAINER */}
       <FeedbackCard
         type="bad"
-        title="Bad Points (Areas for Improvement)"
-        subtitle="Critical technical flaws detected to eliminate"
+        title="Verbeterpunten (Aandachtspunten)"
+        subtitle="Cruciale technische aandachtspunten om direct aan te werken"
         items={analysis.badPoints}
       />
 
-      {/* Coach Drills & Recommendations */}
+      {/* Aanbevolen Trainer Oefeningen */}
       {analysis.coachTips && analysis.coachTips.length > 0 && (
         <View style={styles.coachCard}>
           <View style={styles.coachHeader}>
@@ -145,8 +143,8 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               <Ionicons name="school" size={18} color={Colors.primary} />
             </View>
             <View>
-              <Text style={styles.coachTitle}>Recommended Coach Drills</Text>
-              <Text style={styles.coachSubtitle}>Targeted training to fix detected bad points</Text>
+              <Text style={styles.coachTitle}>Aanbevolen Trainingsvormen</Text>
+              <Text style={styles.coachSubtitle}>Gerichte oefeningen om de aandachtspunten te verhelpen</Text>
             </View>
           </View>
 
@@ -161,48 +159,48 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         </View>
       )}
 
-      {/* Mandatory Action Buttons */}
+      {/* De Twee Hoofdknoppen */}
       <View style={styles.actionsContainer}>
-        {/* Button 1: Record new video */}
+        {/* Knop 1: Record new video / Nieuwe video opnemen */}
         <TouchableOpacity
           style={[styles.actionBtn, styles.recordNewBtn]}
           onPress={onRecordNewVideo}
           activeOpacity={0.85}
-          accessibilityLabel="Record new video"
+          accessibilityLabel="Nieuwe video opnemen"
         >
           <View style={styles.btnIconBg}>
             <Ionicons name="videocam" size={20} color={Colors.white} />
           </View>
           <View style={styles.btnTextContainer}>
-            <Text style={styles.recordNewBtnText}>Record new video</Text>
-            <Text style={styles.btnSubtext}>Open camera for another shot</Text>
+            <Text style={styles.recordNewBtnText}>Nieuwe video opnemen</Text>
+            <Text style={styles.btnSubtext}>Open de camera voor een volgende slag</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={Colors.white} />
         </TouchableOpacity>
 
-        {/* Button 2: Export feedback */}
+        {/* Knop 2: Export feedback / Feedback exporteren */}
         <TouchableOpacity
           style={[styles.actionBtn, styles.exportBtn]}
           onPress={handleExport}
           disabled={isExporting}
           activeOpacity={0.85}
-          accessibilityLabel="Export feedback"
+          accessibilityLabel="Feedback exporteren"
         >
           <View style={[styles.btnIconBg, styles.exportIconBg]}>
             <Ionicons name="share-social" size={20} color={Colors.primary} />
           </View>
           <View style={styles.btnTextContainer}>
-            <Text style={styles.exportBtnText}>Export feedback</Text>
-            <Text style={styles.btnSubtext}>Share full report with coach or player</Text>
+            <Text style={styles.exportBtnText}>Feedback exporteren</Text>
+            <Text style={styles.btnSubtext}>Deel rapport met trainer of medespeler</Text>
           </View>
           <Ionicons name="share-outline" size={18} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* Back to Home Link */}
+      {/* Terug naar Start Link */}
       <TouchableOpacity style={styles.homeLink} onPress={onNavigateHome}>
         <Ionicons name="home-outline" size={16} color={Colors.textMuted} />
-        <Text style={styles.homeLinkText}>Return to Home</Text>
+        <Text style={styles.homeLinkText}>Terug naar start</Text>
       </TouchableOpacity>
     </ScrollView>
   );

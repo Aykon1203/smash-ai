@@ -9,9 +9,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "SmashAI needs camera access to record your badminton shots for AI biomechanical analysis.",
-        "NSMicrophoneUsageDescription": "SmashAI needs microphone access to record badminton video audio.",
-        "NSPhotoLibraryUsageDescription": "SmashAI needs access to your photo library to select recorded badminton videos."
+        "NSCameraUsageDescription": "SmashAI heeft toegang nodig tot je camera om je badmintonslagen op te nemen voor AI-slaganalyse.",
+        "NSMicrophoneUsageDescription": "SmashAI heeft toegang nodig tot de microfoon voor geluid bij video-opnames.",
+        "NSPhotoLibraryUsageDescription": "SmashAI heeft toegang nodig tot je fotobibliotheek om badmintonvideo's te selecteren."
       }
     },
     "android": {
@@ -36,8 +36,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you analyze badminton shot videos.",
-          "cameraPermission": "The app accesses your camera to record badminton shot videos."
+          "photosPermission": "SmashAI gebruikt je foto's om badmintonvideo's te analyseren.",
+          "cameraPermission": "SmashAI gebruikt je camera om badmintonslagen op te nemen."
         }
       ]
     ]

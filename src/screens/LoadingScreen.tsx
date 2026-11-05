@@ -18,12 +18,12 @@ interface LoadingScreenProps {
   onCancel: () => void;
 }
 
-const BADMINTON_FACTS = [
-  'Badminton is the fastest racket sport on Earth, with recorded smashes over 490 km/h!',
-  'A jump smash generates up to 20% steeper downward angle than a standing smash.',
-  'Top players use forearm pronation to generate 80% of their smash racket head speed.',
-  'In backhand clears, the thumb must press along the wider bevel of the racket handle.',
-  'Lin Dan and Lee Chong Wei played in 40 international tournament finals against each other.',
+const BADMINTON_FEITEN = [
+  'Badminton is de snelste racketsport ter wereld, met geregistreerde smashes van meer dan 490 km/u!',
+  'Een jump smash levert een tot 20% steilere neerwaartse invalshoek op dan een staande smash.',
+  'Topspelers genereren 80% van hun smashkracht via onderarmpronatie en polssnap.',
+  'Bij een backhand clear drukt de duim krachtig op het brede facet van de handgreep.',
+  'Lin Dan en Lee Chong Wei stonden in 40 internationale finales tegenover elkaar.',
 ];
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
@@ -35,14 +35,13 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
 
-  // Animation values
+  // Animaties
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // Shuttlecock pulse & rotate animations
+  // Shuttlecock pulsatie- & rotatie-effecten
   useEffect(() => {
-    // Spin animation
     const spinLoop = Animated.loop(
       Animated.timing(spinAnim, {
         toValue: 1,
@@ -53,7 +52,6 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     );
     spinLoop.start();
 
-    // Pulse animation
     const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -72,9 +70,8 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     );
     pulseLoop.start();
 
-    // Rotate tips
     const tipInterval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % BADMINTON_FACTS.length);
+      setTipIndex((prev) => (prev + 1) % BADMINTON_FEITEN.length);
     }, 2800);
 
     return () => {
@@ -84,7 +81,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     };
   }, []);
 
-  // Run AI analysis
+  // Voer de AI-slaganalyse uit
   useEffect(() => {
     let isMounted = true;
 
@@ -102,7 +99,6 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         });
 
         if (isMounted) {
-          // Brief pause at 100% for satisfying feedback
           setTimeout(() => {
             if (isMounted) {
               onAnalysisComplete(result);
@@ -110,7 +106,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
           }, 350);
         }
       } catch (err) {
-        console.error('Analysis error:', err);
+        console.error('Analysefout:', err);
       }
     }
 
@@ -128,10 +124,10 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Background glow */}
+      {/* Achtergrond gloed */}
       <View style={styles.radialGlow} />
 
-      {/* Video Source Indicator */}
+      {/* Videobron indicator */}
       <View style={styles.sourceBadge}>
         <Ionicons
           name={video.source === 'camera' ? 'videocam' : video.source === 'upload' ? 'folder' : 'flash'}
@@ -139,11 +135,11 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
           color={Colors.primary}
         />
         <Text style={styles.sourceText} numberOfLines={1}>
-          {video.name || 'Badminton Video'}
+          {video.name || 'Badmintonvideo'}
         </Text>
       </View>
 
-      {/* Animated Shuttlecock Hub */}
+      {/* Geanimeerde Shuttlecock Hub */}
       <View style={styles.shuttlecockContainer}>
         <View style={styles.outerOrbit}>
           <Animated.View
@@ -164,13 +160,13 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         </View>
 
         <Text style={styles.progressPercent}>{progress}%</Text>
-        <Text style={styles.loadingHeading}>Analyzing Badminton Shot</Text>
+        <Text style={styles.loadingHeading}>Badmintonslag Analyseren</Text>
         <Text style={styles.loadingSubheading}>
-          {ANALYSIS_STAGES[currentStageIndex]?.description || 'Processing stroke mechanics...'}
+          {ANALYSIS_STAGES[currentStageIndex]?.description || 'Slagmechanica wordt verwerkt...'}
         </Text>
       </View>
 
-      {/* Progress Bar Container */}
+      {/* Voortgangsbalk */}
       <View style={styles.progressBarWrapper}>
         <View style={styles.progressBarTrack}>
           <Animated.View
@@ -187,7 +183,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         </View>
       </View>
 
-      {/* AI Analysis Stages Checklist */}
+      {/* AI Analysestappen Checklist */}
       <View style={styles.stagesCard}>
         {ANALYSIS_STAGES.map((stage, idx) => {
           const isDone = idx < currentStageIndex || progress === 100;
@@ -227,18 +223,18 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         })}
       </View>
 
-      {/* Badminton Fact Card */}
+      {/* Badminton Weetje / Tip */}
       <View style={styles.factCard}>
         <View style={styles.factHeader}>
           <Ionicons name="sparkles" size={16} color={Colors.accentVolt} />
-          <Text style={styles.factLabel}>BADMINTON PRO TIP</Text>
+          <Text style={styles.factLabel}>BADMINTON PRO-TIP</Text>
         </View>
-        <Text style={styles.factText}>{BADMINTON_FACTS[tipIndex]}</Text>
+        <Text style={styles.factText}>{BADMINTON_FEITEN[tipIndex]}</Text>
       </View>
 
-      {/* Cancel button */}
+      {/* Annuleren knop */}
       <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-        <Text style={styles.cancelText}>Cancel Analysis</Text>
+        <Text style={styles.cancelText}>Analyse annuleren</Text>
       </TouchableOpacity>
     </View>
   );

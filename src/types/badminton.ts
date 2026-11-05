@@ -11,7 +11,7 @@ export interface VideoInfo {
   thumbnailUri?: string;
 }
 
-export type ShotCategory = 'Smash' | 'Clear' | 'Drop' | 'Drive' | 'Net Shot';
+export type ShotCategory = 'Smash' | 'Clear' | 'Drop' | 'Drive' | 'Netslag';
 
 export type ShotKey = 
   | 'jump_smash'
@@ -37,7 +37,7 @@ export interface AnalysisMetric {
   label: string;
   value: string;
   subtext?: string;
-  badge?: 'High' | 'Elite' | 'Good' | 'Needs Work';
+  badge?: 'Hoog' | 'Elite' | 'Goed' | 'Verbetering';
 }
 
 export interface ShotAnalysis {
