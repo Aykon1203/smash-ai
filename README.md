@@ -1,173 +1,120 @@
 # 🏸 SmashAI - Badminton AI Shot Analyzer
 
-SmashAI is an intelligent React Native mobile application that analyzes badminton strokes and shots in real time. Players and coaches can record live video of a player hitting a shuttlecock or upload existing footage to receive instant computer vision biomechanical feedback.
+SmashAI is een intelligente React Native mobiele applicatie die badminton-slagen in real-time analyseert met behulp van een **on-device Google MediaPipe Pose (BlazePose 33-punts)** computervisie-pipeline. Spelers en trainers kunnen live video opnemen van een speler die de shuttle raakt of bestaande videobeelden uploaden om directe biomechanische feedback te ontvangen.
 
 ---
 
-## ✨ Features
+## 🧠 On-Device AI Computer Vision Pipeline
 
-- **🏸 Comprehensive Badminton Shot Support**:
-  - **Explosive Jump Smash** (peak elevation, scissor kick timing, downward steepness)
-  - **Taufik-Style Backhand Smash** (forearm supination, thumb bevel power, element of surprise)
-  - **Overhead Backhand Clear** (rear corner recovery, baseline tramline depth)
-  - **Deceptive Backhand Drop** (slice disguise, net tape clearance)
-  - **Steep Forehand Smash** (forearm pronation, shoulder turn, velocity)
-  - **Attacking Overhead Clear** (deep court control)
-  - **Cross-Court Slice Drop** (feather slice angle, sharp descent)
-  - **Fast Flat Drive** (doubles tempo, compact backswing)
-  - **Explosive Net Kill / Tap** (net tape reflex, zero backswing brush)
+SmashAI gebruikt geen statische mock data meer, maar verwerkt video's via een 4-traps on-device analyse-pipeline:
 
-- **📱 Three-Screen Flow**:
-  1. **Home Screen (`Home`)**:
-     - Central container for capturing badminton footage.
-     - **Record Video** button: Opens native camera to film a player hitting a shuttlecock.
-     - **Upload Video** button: Picks recorded video clips from the gallery.
-     - **Quick Shot Selector**: Try any shot type instantly with realistic sample data.
-     - **Shooting Guidelines**: Tips for best camera angles, frame rates (60fps), and player positioning.
-  2. **Loading Screen (`Loading`)**:
-     - Animated badminton shuttlecock visualizer.
-     - Dynamic progress bar (0% → 100%).
-     - Multi-stage AI pipeline checklist:
-       1. Shuttlecock trajectory extraction & flight curve
-       2. Player skeletal biomechanics & kinetic chain tracking
-       3. Impact dynamics, racket head velocity & impact angle
-       4. Feedback synthesis & coaching drill formulation
-     - Cycling badminton pro tips and facts.
-  3. **Result Screen (`Result`)**:
-     - Shot category badge, shot name & technique score (e.g., 92/100).
-     - **Biomechanical Metrics**:
-       - Estimated smash speed (km/h)
-       - Contact point height (m)
-       - Downward trajectory impact angle (degrees)
-       - Kinetic chain efficiency (%)
-     - **Good Points (Technique Strengths)**: Highlighted biomechanical positives.
-     - **Bad Points (Areas for Improvement)**: Critical technical flaws to eliminate.
-     - **Coach Recommendations & Targeted Drills**: Step-by-step training exercises.
-     - **Record New Video Button**: Clears analysis and returns ready for the next shot.
-     - **Export Feedback Button**: Native OS share sheet export with formatted coach report.
+```
+[ Videobestand (Camera / Galerij) ]
+             │
+             ▼
+ 1. Frame Extraheerder (expo-video-thumbnails)
+    Bemonstert 6 opeenvolgende frames over het slagtraject
+             │
+             ▼
+ 2. Google MediaPipe BlazePose On-Device Model
+    Detecteert 33 3D-lichaamslandmarks (schouders, ellebogen, polsen, heupen, knieën, enkels)
+             │
+             ▼
+ 3. Kinematica & Vluchtbaan Engine (kinematics.ts)
+    • Elleboogstrekking (schouder - elleboog - pols vectorhoek)
+    • Schouderheffingshoek (heup - schouder - elleboog)
+    • Sprongapex (heupverplaatsing in meters)
+    • Racketsnelheid & polsversnelling (Δd / Δt met hefboomfactor)
+    • Neerwaartse impacthoek (invalshoek in graden)
+    • Kniebuiging bij landing & schokabsorptie
+    • Herstelsnelheid (split-step timing)
+             │
+             ▼
+ 4. Slagclassificatie & Dynamisch Biomechanisch Rapport (shotClassifier.ts)
+    Berekent de werkelijke techniekscore (0–100) en formuleert dynamische
+    sterke en zwakke punten direct afgeleid van de gedetecteerde gewrichtshoeken.
+```
 
 ---
 
-## 🏗️ Project Architecture
+## ✨ Functionaliteiten
+
+- **🏸 Volledige Slagondersteuning**:
+  - **Explosieve Jump Smash** (verticale sprongkracht, schaarsprong, steile hoek)
+  - **Backhand Smash (Taufik-stijl)** (onderarmsupinatie, duimdruk op het brede facet)
+  - **Hoge Backhand Clear** (herstel vanuit de achterste hoek, diepe baselinebaan)
+  - **Misleidende Backhand Drop** (gesneden balcontact, strakke netpassage)
+  - **Steile Forehand Smash** (onderarmpronatie, harde smash)
+  - **Aanvallende Overhead Clear** (diepe boogbal ter controle)
+  - **Cross-Court Slice Dropshot** (snijdende hoek met plotselinge duik)
+  - **Snelle Vlakke Drive** (dubbelspel tempo, compacte achterzwaai)
+  - **Explosieve Net Kill / Tap** (snelle netreactie zonder achterzwaai)
+
+- **📱 Drie Hoofdschermen**:
+  1. **Start (`Home`)**:
+     - Centrale video invoer container met **Video Opnemen** (camera) en **Video Uploaden** (galerij).
+     - Slagen-selector om specifieke slagpatronen te testen.
+     - Richtlijnen voor optimale camera-opstelling (zijaanzicht, 3–4m afstand, 60fps).
+  2. **Analyseren (`Loading`)**:
+     - Geanimeerde shuttlecock en voortgangsbalk (0% → 100%).
+     - Stappenoverzicht met de status van de MediaPipe visie-pipeline.
+     - Wisselende professionele badmintontips en feiten.
+  3. **Resultaat (`Result`)**:
+     - Gedetecteerd slagtype, categorie en berekende techniekscore.
+     - Biomechanische metrieken: snelheid (km/u), raakpunthoogte (m), invalshoek (°) en kinetische efficiëntie (%).
+     - **Goede punten**: concrete sterke punten op basis van gemeten hoeken.
+     - **Verbeterpunten**: concrete aandachtspunten (bijv. gebogen elleboog, stijve knielanding).
+     - **Aanbevolen trainingsvormen**: oefeningen afgestemd op de gevonden fouten.
+     - **Nieuwe video opnemen** knop & **Feedback exporteren** knop via native deelscherm.
+
+---
+
+## 🏗️ Projectstructuur
 
 ```
 SmashAI/
-├── App.tsx                    # Root app component and screen state manager
-├── index.ts                   # Entry point
-├── app.json                   # Expo config, camera & media permissions
+├── App.tsx                               # Schermcontroller (Start ⇄ Analyseren ⇄ Resultaat)
+├── app.json                              # Expo configuratie & cameratoestemmingen
 ├── src/
 │   ├── types/
-│   │   └── badminton.ts       # TypeScript interfaces for shots, metrics, video & progress
+│   │   └── badminton.ts                  # TypeScript interfaces voor slagen, metrieken & video
 │   ├── constants/
-│   │   └── theme.ts           # Athletic sports styling, badminton court green & volt palette
+│   │   └── theme.ts                      # Baangroen & volt-geel kleurenpalet
 │   ├── services/
-│   │   ├── aiAnalyzer.ts      # Multi-stage AI stroke analyzer & shot database
-│   │   └── exportService.ts   # Formatted feedback report generator & native share utility
+│   │   ├── aiAnalyzer.ts                 # Hoofd AI vision service pipeline
+│   │   ├── exportService.ts              # Nederlands feedbackrapport & native delen
+│   │   └── poseEstimation/
+│   │       ├── types.ts                  # 33 MediaPipe landmarks & biomechanische interfaces
+│   │       ├── frameExtractor.ts         # Frame sampling via expo-video-thumbnails
+│   │       ├── mediaPipeModel.ts         # On-device MediaPipe BlazePose 33-punts model
+│   │       ├── kinematics.ts             # Vectorhoeken, sprongapex & snelheidscalculaties
+│   │       └── shotClassifier.ts         # Slagclassificatie & dynamische feedbackgenerator
 │   ├── components/
-│   │   ├── Header.tsx         # Brand header with badminton logo and live screen indicator
-│   │   ├── MetricCard.tsx     # Biomechanical metric cards (speed, height, angle, efficiency)
-│   │   └── FeedbackCard.tsx   # Good Points & Bad Points cards with custom badges
+│   │   ├── Header.tsx                    # Merkheader met live schermstatus
+│   │   ├── MetricCard.tsx                # Kaarten voor snelheid, hoogte, hoek & keten
+│   │   └── FeedbackCard.tsx              # Visuele kaarten voor Goede en Slechte punten
 │   └── screens/
-│       ├── HomeScreen.tsx     # Central video capture / upload container & shot selector
-│       ├── LoadingScreen.tsx  # Animated AI progress bar & stage checklist
-│       └── ResultScreen.tsx   # Shot breakdown, good/bad points, Record New & Export buttons
+│       ├── HomeScreen.tsx                # Video invoer container & slagenbibliotheek
+│       ├── LoadingScreen.tsx             # Geanimeerde AI voortgang & stappencontrole
+│       └── ResultScreen.tsx              # Resultaten, goede/slechte punten & actieknoppen
 ```
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js (v18+)
-- pnpm or npm
-
-### Installation
+## 🚀 Aan de Slag
 
 ```bash
-# Clone the repository
-git clone <repo-url>
 cd SmashAI
 
-# Install dependencies
+# Dependencies installeren
 pnpm install
-# or
-npm install
-```
 
-### Running the App
+# Start in tunnel-modus (voorkomt netwerk- & firewallproblemen in Expo Go)
+pnpm run start:tunnel
 
-```bash
-# Start the Expo development server
+# Of standaard lokale start
 pnpm start
 
-# Run on Android emulator / device
-pnpm run android
-
-# Run on iOS simulator (macOS required)
-pnpm run ios
-
-# Run in Web browser
-pnpm run web
-```
-
-### Type Checking
-
-```bash
+# Typecheck verifiëren
 pnpm run typecheck
 ```
-
----
-
-## 🔒 Permissions Configured
-
-- **iOS (`infoPlist`)**:
-  - `NSCameraUsageDescription`: Access required to film badminton strokes.
-  - `NSMicrophoneUsageDescription`: Access required for audio in recorded videos.
-  - `NSPhotoLibraryUsageDescription`: Access required to upload badminton videos.
-- **Android**:
-  - `CAMERA`
-  - `RECORD_AUDIO`
-  - `READ_EXTERNAL_STORAGE`
-
----
-
-## 🏸 Feedback Report Export Format
-
-When tapping **Export feedback**, SmashAI formats a clean coaching summary:
-
-```text
-🏸 SMASHAI BADMINTON SHOT REPORT 🏸
-----------------------------------------
-Shot Type: Explosive Jump Smash (Smash)
-Technique Score: 92/100
-Analysis Time: 21:15
-Summary: High-altitude contact with devastating downward penetration
-
-KEY METRICS:
-- Estimated Smash Speed: 365 km/h
-- Contact Height: 2.96 m
-- Impact Downward Angle: 21.3°
-- Kinetic Chain Efficiency: 94%
-
-GOOD POINTS (STRENGTHS):
-  1. [GOOD] Outstanding vertical leap: contact reached at 2.96m peak elevation.
-  2. [GOOD] Scissor kick footwork perfectly timed with forearm pronation & wrist snap.
-  ...
-
-AREAS FOR IMPROVEMENT (BAD POINTS):
-  1. [WORK ON] Non-racket balance arm dropped prematurely during the jump peak.
-  2. [WORK ON] Landing impact absorbed heavily on stiff right heel instead of forefoot.
-  ...
-
-COACH RECOMMENDATIONS & DRILLS:
-  • Incorporate plyometric box jumps with racket shadow swings to cushion landings.
-  • Keep your non-racket arm pointing at the shuttle until the split second of rotation.
-----------------------------------------
-Generated by SmashAI - AI Badminton Technique Coach
-```
-
----
-
-## 📄 License
-
-MIT
