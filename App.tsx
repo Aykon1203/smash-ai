@@ -9,6 +9,7 @@ import { Header } from './src/components/Header';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoadingScreen } from './src/screens/LoadingScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
+import { PoseVisionBridge } from './src/components/PoseVisionBridge';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('Home');
@@ -50,6 +51,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <PoseVisionBridge />
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <StatusBar style="light" />
 

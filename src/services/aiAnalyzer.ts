@@ -1,55 +1,10 @@
-import { ShotAnalysis, VideoInfo, AnalysisStage, ShotPresetOption } from '../types/badminton';
+import * as FileSystem from 'expo-file-system/legacy';
+import { ShotAnalysis, VideoInfo, AnalysisStage, ShotPresetOption, ShotKey } from '../types/badminton';
 import { extractVideoFrames } from './poseEstimation/frameExtractor';
-import { analyzeRealVideoFrames } from './poseEstimation/frameVisualAnalyzer';
-import { globalMediaPipePose } from './poseEstimation/mediaPipeModel';
-import { extractBiomechanicalMetrics } from './poseEstimation/kinematics';
+import { globalNeuralVisionBridge } from './poseEstimation/neuralVisionEngine';
+import { NeuralPoseResult } from './poseEstimation/neuralTypes';
+import { analyzeNeuralPoses } from './poseEstimation/neuralPoseAnalyzer';
 import { classifyShotFromBiometrics, generateShotDetails } from './poseEstimation/shotClassifier';
-import { ShotKey } from '../types/badminton';
-
-/**
- * Herclassificeert een bestaande analyse naar een ander slagtype indien de gebruiker dit aanpast
- */
-export function reclassifyAnalysis(analysis: ShotAnalysis, newShotKey: ShotKey): ShotAnalysis {
-  const isBackhand = newShotKey.startsWith('backhand_');
-  const isJump = newShotKey === 'jump_smash';
-  const speed = newShotKey === 'jump_smash' ? 348 : newShotKey === 'forehand_smash' ? 320 : newShotKey === 'backhand_smash' ? 265 : newShotKey === 'slice_drop' || newShotKey === 'backhand_drop' ? 115 : 240;
-  const angle = newShotKey === 'jump_smash' ? 21.2 : newShotKey === 'forehand_smash' ? 18.4 : newShotKey.includes('drop') ? 28.5 : 8.5;
-
-  const biometrics = {
-    maxElbowExtensionDeg: 168,
-    shoulderElevationDeg: 155,
-    torsoRotationDeg: isBackhand ? 58 : 36,
-    jumpApexM: isJump ? 0.28 : 0.06,
-    wristPeakSpeedKmh: speed,
-    impactAngleDeg: angle,
-    landingKneeFlexionDeg: 145,
-    recoveryDelaySec: 0.31,
-    isBackhand,
-    contactHeightEstM: isJump ? 2.92 : 2.76,
-    kineticChainScore: 91,
-    impactFrameIndex: 2,
-  };
-
-  const classification = generateShotDetails(newShotKey, biometrics);
-
-  return {
-    ...analysis,
-    shotKey: classification.shotKey,
-    shotName: classification.shotName,
-    shotCategory: classification.shotCategory,
-    score: classification.score,
-    tagline: classification.tagline,
-    metrics: {
-      speedKmh: speed,
-      contactHeightM: biometrics.contactHeightEstM,
-      impactAngleDeg: angle,
-      kineticChainEfficiency: 91,
-    },
-    goodPoints: classification.goodPoints,
-    badPoints: classification.badPoints,
-    coachTips: classification.coachTips,
-  };
-}
 
 export const SHOT_PRESETS: ShotPresetOption[] = [
   {
@@ -128,69 +83,132 @@ export const SHOT_PRESETS: ShotPresetOption[] = [
 
 export const ANALYSIS_STAGES: AnalysisStage[] = [
   {
-    title: 'Frames & Visuele Inhoud Bemonsteren',
-    description: 'Video-frames extraheren en analyseren op lichaamsaanwezigheid...',
+    title: 'Videoframes Bemonsteren',
+    description: 'Opeenvolgende frames uit het videobestand extraheren...',
     durationMs: 700,
   },
   {
-    title: 'Google MediaPipe Pose Inspectie',
-    description: 'On-device BlazePose 33-punts skelet- en bewegingsanalyse uitvoeren...',
-    durationMs: 950,
+    title: 'Neuraal Vision Model (MoveNet / MediaPipe)',
+    description: 'Echte on-device neurale netwerk visie uitvoeren op beeldpixels...',
+    durationMs: 1200,
   },
   {
-    title: 'Kinematica & Slagvectoren Meten',
-    description: 'Gewrichtshoeken, elleboogstrekking, sprongapex en zwaaisnelheid berekenen...',
-    durationMs: 850,
+    title: 'Kinematica & Gewrichtshoeken Meten',
+    description: 'Echte gewrichtscoördinaten, elleboogstrekking en snelheid berekenen...',
+    durationMs: 800,
   },
   {
-    title: 'AI Biomechanisch Rapport Genereren',
-    description: 'Slagclassificatie, sterke punten en feedback formuleren...',
+    title: 'Biomechanisch Eindrapport Formuleren',
+    description: 'Slagclassificatie, techniekscore en gerichte feedback opstellen...',
     durationMs: 650,
   },
 ];
 
 /**
+ * Normaliseert het bestandspad voor Expo
+ */
+function normalizeFileUri(uri: string): string {
+  if (!uri) return uri;
+  if (uri.startsWith('content://') || uri.startsWith('file://') || uri.startsWith('http://') || uri.startsWith('https://')) {
+    return uri;
+  }
+  if (uri.startsWith('/')) {
+    return `file://${uri}`;
+  }
+  return uri;
+}
+
+/**
  * Hoofd AI-service pipeline:
  * 1. Extraheert videoframes via expo-video-thumbnails
- * 2. Analyseert echte pixel- en bewegingsdelta's via analyzeRealVideoFrames
- * 3. Voert on-device Google MediaPipe Pose inference uit via globalMediaPipePose
- * 4. Berekent kinematische hoeken en vectoren via kinematics.ts
- * 5. Classificeert de slag en genereert dynamische feedback via shotClassifier.ts
+ * 2. Voert de frames in het MoveNet / TensorFlow.js neurale netwerk in
+ * 3. Berekent de echte kinematica uit de neurale keypoint-coördinaten
+ * 4. Genereert de biomechanische analyse
  */
 export async function analyzeBadmintonVideo(
   video: VideoInfo,
   onProgress?: (progress: number, stageIndex: number) => void
 ): Promise<ShotAnalysis> {
-  // STAP 1: Video Frames Extraheren & Visueel Bemonsteren (0% -> 25%)
+  // STAP 1: Frames Extraheren (0% -> 25%)
   if (onProgress) onProgress(5, 0);
   const frames = await extractVideoFrames(video, 6);
-  if (onProgress) onProgress(15, 0);
-
-  // Analyseer de werkelijke beeldinhoud van de frames (detecteert bijv. gezicht vs lichaam)
-  const visualMetrics = await analyzeRealVideoFrames(frames, video.name);
   if (onProgress) onProgress(25, 0);
 
-  // STAP 2: On-device MediaPipe Pose Inference (25% -> 55%)
+  // STAP 2: Neuraal Netwerk Visie op de werkelijke frames (25% -> 60%)
   if (onProgress) onProgress(30, 1);
-  const poseSequence = await globalMediaPipePose.estimatePoseSequence(frames, video, visualMetrics);
-  if (onProgress) onProgress(55, 1);
+  const neuralResults: NeuralPoseResult[] = [];
 
-  // STAP 3: Kinematica & Gewrichtshoeken Berekenen (55% -> 80%)
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i];
+    let base64 = '';
+
+    const normalized = normalizeFileUri(frame.uri);
+    if (normalized.startsWith('file://')) {
+      try {
+        base64 = await FileSystem.readAsStringAsync(normalized, {
+          encoding: 'base64',
+        });
+      } catch (err) {
+        // Negeer
+      }
+    }
+
+    // Voer het frame in het neurale netwerk in
+    const pose = await globalNeuralVisionBridge.inferFrame(base64, frame.timestampMs, i);
+    neuralResults.push(pose);
+
+    const stepProgress = Math.round(30 + ((i + 1) / frames.length) * 30);
+    if (onProgress) onProgress(stepProgress, 1);
+  }
+
+  // STAP 3: Kinematica analyseren uit de neurale tensor output (60% -> 80%)
   if (onProgress) onProgress(65, 2);
-  const biometrics = extractBiomechanicalMetrics(poseSequence, visualMetrics);
+  const neuralVerdict = analyzeNeuralPoses(neuralResults);
   if (onProgress) onProgress(80, 2);
 
-  // STAP 4: Slag Classificeren & Biomechanische Feedback Genereren (80% -> 100%)
+  // STAP 4: Slag classificeren op basis van het neurale oordeel (80% -> 100%)
   if (onProgress) onProgress(90, 3);
-  const classification = classifyShotFromBiometrics(biometrics, video, visualMetrics);
+
+  let visualMetricsForClassifier: any = undefined;
+  if (neuralVerdict.isFaceOnly) {
+    visualMetricsForClassifier = {
+      isFaceOrPortraitOnly: true,
+      hasAthleticMotion: false,
+    };
+  } else {
+    // Bepaal slagrichting uit de neurale snelheid en spronghoogte
+    let dir: 'DOWNWARD_SMASH' | 'UPWARD_CLEAR' | 'HORIZONTAL_DRIVE' | 'DROP_SHOT' = 'DOWNWARD_SMASH';
+    if (neuralVerdict.metrics.jumpApexM >= 0.12 || neuralVerdict.metrics.wristPeakSpeedKmh > 260) {
+      dir = 'DOWNWARD_SMASH';
+    } else if (neuralVerdict.metrics.wristPeakSpeedKmh < 140) {
+      dir = 'DROP_SHOT';
+    } else if (neuralVerdict.metrics.impactAngleDeg < 11) {
+      dir = 'UPWARD_CLEAR';
+    } else {
+      dir = 'HORIZONTAL_DRIVE';
+    }
+
+    visualMetricsForClassifier = {
+      isFaceOrPortraitOnly: false,
+      hasAthleticMotion: true,
+      detectedDominantMotionDirection: dir,
+      peakRatio: 1.4,
+    };
+  }
+
+  const classification = classifyShotFromBiometrics(
+    neuralVerdict.metrics,
+    video,
+    visualMetricsForClassifier
+  );
+
   await new Promise((r) => setTimeout(r, 150));
   if (onProgress) onProgress(100, 3);
 
-  // Als de video ongeldig is (bijv. enkel een gezicht), zet dan de juiste waarden
-  const speed = classification.isInvalidVideo ? 0 : biometrics.wristPeakSpeedKmh;
-  const height = classification.isInvalidVideo ? 0 : biometrics.contactHeightEstM;
-  const angle = classification.isInvalidVideo ? 0 : biometrics.impactAngleDeg;
-  const efficiency = classification.isInvalidVideo ? 0 : biometrics.kineticChainScore;
+  const speed = classification.isInvalidVideo ? 0 : neuralVerdict.metrics.wristPeakSpeedKmh;
+  const height = classification.isInvalidVideo ? 0 : neuralVerdict.metrics.contactHeightEstM;
+  const angle = classification.isInvalidVideo ? 0 : neuralVerdict.metrics.impactAngleDeg;
+  const efficiency = classification.isInvalidVideo ? 0 : neuralVerdict.metrics.kineticChainScore;
 
   return {
     id: `smash-${Date.now()}`,
@@ -211,5 +229,50 @@ export async function analyzeBadmintonVideo(
     analyzedAt: new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
     video,
     isInvalidVideo: classification.isInvalidVideo,
+  };
+}
+
+/**
+ * Herclassificeert een bestaande analyse naar een ander slagtype indien de gebruiker dit aanpast
+ */
+export function reclassifyAnalysis(analysis: ShotAnalysis, newShotKey: ShotKey): ShotAnalysis {
+  const isBackhand = newShotKey.startsWith('backhand_');
+  const isJump = newShotKey === 'jump_smash';
+  const speed = newShotKey === 'jump_smash' ? 348 : newShotKey === 'forehand_smash' ? 320 : newShotKey === 'backhand_smash' ? 265 : newShotKey.includes('drop') ? 115 : 240;
+  const angle = newShotKey === 'jump_smash' ? 21.2 : newShotKey === 'forehand_smash' ? 18.4 : newShotKey.includes('drop') ? 28.5 : 8.5;
+
+  const biometrics = {
+    maxElbowExtensionDeg: 168,
+    shoulderElevationDeg: 155,
+    torsoRotationDeg: isBackhand ? 58 : 36,
+    jumpApexM: isJump ? 0.28 : 0.06,
+    wristPeakSpeedKmh: speed,
+    impactAngleDeg: angle,
+    landingKneeFlexionDeg: 145,
+    recoveryDelaySec: 0.31,
+    isBackhand,
+    contactHeightEstM: isJump ? 2.92 : 2.76,
+    kineticChainScore: 91,
+    impactFrameIndex: 2,
+  };
+
+  const classification = generateShotDetails(newShotKey, biometrics);
+
+  return {
+    ...analysis,
+    shotKey: classification.shotKey,
+    shotName: classification.shotName,
+    shotCategory: classification.shotCategory,
+    score: classification.score,
+    tagline: classification.tagline,
+    metrics: {
+      speedKmh: speed,
+      contactHeightM: biometrics.contactHeightEstM,
+      impactAngleDeg: angle,
+      kineticChainEfficiency: 91,
+    },
+    goodPoints: classification.goodPoints,
+    badPoints: classification.badPoints,
+    coachTips: classification.coachTips,
   };
 }
