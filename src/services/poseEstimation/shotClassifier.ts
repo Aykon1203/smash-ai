@@ -1,5 +1,6 @@
 import { BiomechanicalMetrics } from './types';
-import { ShotCategory, ShotKey, ShotAnalysis, VideoInfo } from '../../types/badminton';
+import { ShotCategory, ShotKey, VideoInfo } from '../../types/badminton';
+import { FrameAnalysisMetrics } from './frameVisualAnalyzer';
 
 interface ClassificationOutput {
   shotKey: ShotKey;
@@ -10,21 +11,73 @@ interface ClassificationOutput {
   goodPoints: string[];
   badPoints: string[];
   coachTips: string[];
+  isInvalidVideo?: boolean;
 }
 
 /**
- * Classificeert een badmintonslag dynamisch op basis van echte MediaPipe biomechanische metingen.
+ * Classificeert een badmintonslag dynamisch op basis van echte MediaPipe biomechanische metingen
+ * en visuele frame-analyses.
  */
 export function classifyShotFromBiometrics(
   metrics: BiomechanicalMetrics,
-  video: VideoInfo
+  video: VideoInfo,
+  visualMetrics?: FrameAnalysisMetrics
 ): ClassificationOutput {
+  // 1. Controleer of de video GEEN badmintonslag bevat (bijv. een video van enkel een gezicht)
+  if (video.source !== 'sample' && visualMetrics && visualMetrics.isFaceOrPortraitOnly) {
+    return {
+      shotKey: 'invalid_face_only',
+      shotName: 'Geen Badmintonslag Gedetecteerd (Alleen Gezicht)',
+      shotCategory: 'Niet Herkend',
+      score: 0,
+      tagline: 'Er is enkel een gezicht/portret waargenomen. Er werd geen badmintonspeler of slagbeweging gedetecteerd.',
+      goodPoints: [
+        'Gezichts- en hoofddetectie via MediaPipe is geslaagd in het videobeeld.',
+        'Videokwaliteit en beeldcontrast zijn voldoende voor computervisiedetectie.',
+      ],
+      badPoints: [
+        'Geen volledig lichaam in beeld: schouders, heupen en benen ontbreken in het frame.',
+        'Geen badmintonracket of zwaaibeweging waargenomen in de opname.',
+        'Geen shuttlecock of slagimpactpunt geregistreerd.',
+      ],
+      coachTips: [
+        'Plaats de camera op 3 tot 4 meter afstand zodat het hele lichaam (van voeten tot boven het hoofd) in beeld is.',
+        'Film vanaf de zijkant of schuine hoek van de baan terwijl de speler een echte badmintonslag uitvoert.',
+        'Zorg dat zowel de voorbereidingszwaai als de uitzwaai van het racket volledig binnen het camerakader vallen.',
+      ],
+      isInvalidVideo: true,
+    };
+  }
+
+  // 2. Controleer op statische opname zonder sportieve slagbeweging
+  if (video.source !== 'sample' && visualMetrics && !visualMetrics.hasAthleticMotion) {
+    return {
+      shotKey: 'invalid_no_swing',
+      shotName: 'Onvoldoende Slagbeweging Gedetecteerd',
+      shotCategory: 'Niet Herkend',
+      score: 15,
+      tagline: 'De speler staat vrijwel stil; er werd geen herkenbare zwaaibeweging of shuttlecontact gemeten.',
+      goodPoints: [
+        'Lichaamscontouren en basishouding zijn geregistreerd door het pose-model.',
+      ],
+      badPoints: [
+        'Geen significante pols- of racketversnelling waargenomen (< 80 km/u).',
+        'Geen opwaarts of neerwaarts slagtraject geïdentificeerd in de frames.',
+      ],
+      coachTips: [
+        'Zorg dat de video een daadwerkelijke slagbeweging bevat (bijv. smash, clear, drop of drive).',
+        'Start de video-opname 1 seconde vóór de slag en stop 1 seconde na de landing.',
+      ],
+      isInvalidVideo: true,
+    };
+  }
+
+  // 3. Echte Badmintonslag Classificatie
   let shotKey: ShotKey = 'jump_smash';
   let shotName = 'Explosieve Jump Smash';
   let shotCategory: ShotCategory = 'Smash';
   let tagline = 'Hoge afzetsprong met agressieve neerwaartse penetratie';
 
-  // 1. Beslisboom op basis van echte biomechanische parameters
   if (metrics.isBackhand) {
     if (metrics.wristPeakSpeedKmh > 230 && metrics.impactAngleDeg > 14) {
       shotKey = 'backhand_smash';
@@ -77,14 +130,14 @@ export function classifyShotFromBiometrics(
     }
   }
 
-  // 2. Bereken echte score op basis van biomechanische kwaliteit (0 - 100)
+  // Score berekening
   const extensionFactor = Math.min(metrics.maxElbowExtensionDeg / 175, 1.0) * 35;
   const speedFactor = Math.min(metrics.wristPeakSpeedKmh / 350, 1.0) * 35;
   const balanceFactor = (metrics.landingKneeFlexionDeg < 155 ? 15 : 8);
   const recoveryFactor = (metrics.recoveryDelaySec < 0.35 ? 15 : 9);
   const score = Math.min(Math.max(Math.round(extensionFactor + speedFactor + balanceFactor + recoveryFactor), 72), 98);
 
-  // 3. Dynamisch gegenereerde Goede Punten uit de MediaPipe Pose data
+  // Dynamische Goede Punten
   const goodPoints: string[] = [];
 
   if (metrics.maxElbowExtensionDeg >= 162) {
@@ -133,7 +186,7 @@ export function classifyShotFromBiometrics(
     );
   }
 
-  // 4. Dynamisch gegenereerde Verbeterpunten uit de MediaPipe Pose data
+  // Dynamische Verbeterpunten
   const badPoints: string[] = [];
 
   if (metrics.maxElbowExtensionDeg < 166) {
@@ -164,7 +217,7 @@ export function classifyShotFromBiometrics(
     );
   }
 
-  // 5. Doelgerichte Coachingstips
+  // Doelgerichte Coachingstips
   const coachTips: string[] = [];
 
   if (metrics.maxElbowExtensionDeg < 166) {

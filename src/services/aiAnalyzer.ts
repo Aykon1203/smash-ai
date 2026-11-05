@@ -1,5 +1,6 @@
 import { ShotAnalysis, VideoInfo, AnalysisStage, ShotPresetOption } from '../types/badminton';
 import { extractVideoFrames } from './poseEstimation/frameExtractor';
+import { analyzeRealVideoFrames } from './poseEstimation/frameVisualAnalyzer';
 import { globalMediaPipePose } from './poseEstimation/mediaPipeModel';
 import { extractBiomechanicalMetrics } from './poseEstimation/kinematics';
 import { classifyShotFromBiometrics } from './poseEstimation/shotClassifier';
@@ -81,23 +82,23 @@ export const SHOT_PRESETS: ShotPresetOption[] = [
 
 export const ANALYSIS_STAGES: AnalysisStage[] = [
   {
-    title: 'Frames & Shuttlebaan Extraheren',
-    description: 'Video-frames bemonsteren en vluchtbaan scannen via expo-video-thumbnails...',
+    title: 'Frames & Visuele Inhoud Bemonsteren',
+    description: 'Video-frames extraheren en analyseren op lichaamsaanwezigheid...',
     durationMs: 700,
   },
   {
-    title: 'Google MediaPipe Pose Inschakelen',
-    description: 'On-device BlazePose 33-punts skeletdetectie uitvoeren op video-opname...',
+    title: 'Google MediaPipe Pose Inspectie',
+    description: 'On-device BlazePose 33-punts skelet- en bewegingsanalyse uitvoeren...',
     durationMs: 950,
   },
   {
-    title: 'Kinematica & Impact Meten',
-    description: 'Gewrichtshoeken, elleboogstrekking, sprongapex en polssnelheid berekenen...',
+    title: 'Kinematica & Slagvectoren Meten',
+    description: 'Gewrichtshoeken, elleboogstrekking, sprongapex en zwaaisnelheid berekenen...',
     durationMs: 850,
   },
   {
     title: 'AI Biomechanisch Rapport Genereren',
-    description: 'Sterke punten, technische aandachtspunten en trainingstips formuleren...',
+    description: 'Slagclassificatie, sterke punten en feedback formuleren...',
     durationMs: 650,
   },
 ];
@@ -105,22 +106,27 @@ export const ANALYSIS_STAGES: AnalysisStage[] = [
 /**
  * Hoofd AI-service pipeline:
  * 1. Extraheert videoframes via expo-video-thumbnails
- * 2. Voert on-device Google MediaPipe Pose (BlazePose 33 keypoints) inference uit
- * 3. Berekent kinematische hoeken en vectoren via kinematics.ts
- * 4. Classificeert de slag en genereert dynamische feedback via shotClassifier.ts
+ * 2. Analyseert echte pixel- en bewegingsdelta's via analyzeRealVideoFrames
+ * 3. Voert on-device Google MediaPipe Pose inference uit via globalMediaPipePose
+ * 4. Berekent kinematische hoeken en vectoren via kinematics.ts
+ * 5. Classificeert de slag en genereert dynamische feedback via shotClassifier.ts
  */
 export async function analyzeBadmintonVideo(
   video: VideoInfo,
   onProgress?: (progress: number, stageIndex: number) => void
 ): Promise<ShotAnalysis> {
-  // STAP 1: Video Frames Extraheren (0% -> 25%)
+  // STAP 1: Video Frames Extraheren & Visueel Bemonsteren (0% -> 25%)
   if (onProgress) onProgress(5, 0);
   const frames = await extractVideoFrames(video, 6);
+  if (onProgress) onProgress(15, 0);
+
+  // Analyseer de werkelijke beeldinhoud van de frames (detecteert bijv. gezicht vs lichaam)
+  const visualMetrics = await analyzeRealVideoFrames(frames);
   if (onProgress) onProgress(25, 0);
 
   // STAP 2: On-device MediaPipe Pose Inference (25% -> 55%)
   if (onProgress) onProgress(30, 1);
-  const poseSequence = await globalMediaPipePose.estimatePoseSequence(frames, video);
+  const poseSequence = await globalMediaPipePose.estimatePoseSequence(frames, video, visualMetrics);
   if (onProgress) onProgress(55, 1);
 
   // STAP 3: Kinematica & Gewrichtshoeken Berekenen (55% -> 80%)
@@ -130,9 +136,15 @@ export async function analyzeBadmintonVideo(
 
   // STAP 4: Slag Classificeren & Biomechanische Feedback Genereren (80% -> 100%)
   if (onProgress) onProgress(90, 3);
-  const classification = classifyShotFromBiometrics(biometrics, video);
+  const classification = classifyShotFromBiometrics(biometrics, video, visualMetrics);
   await new Promise((r) => setTimeout(r, 150));
   if (onProgress) onProgress(100, 3);
+
+  // Als de video ongeldig is (bijv. enkel een gezicht), zet dan de juiste waarden
+  const speed = classification.isInvalidVideo ? 0 : biometrics.wristPeakSpeedKmh;
+  const height = classification.isInvalidVideo ? 0 : biometrics.contactHeightEstM;
+  const angle = classification.isInvalidVideo ? 0 : biometrics.impactAngleDeg;
+  const efficiency = classification.isInvalidVideo ? 0 : biometrics.kineticChainScore;
 
   return {
     id: `smash-${Date.now()}`,
@@ -142,15 +154,16 @@ export async function analyzeBadmintonVideo(
     score: classification.score,
     tagline: classification.tagline,
     metrics: {
-      speedKmh: biometrics.wristPeakSpeedKmh,
-      contactHeightM: biometrics.contactHeightEstM,
-      impactAngleDeg: biometrics.impactAngleDeg,
-      kineticChainEfficiency: biometrics.kineticChainScore,
+      speedKmh: speed,
+      contactHeightM: height,
+      impactAngleDeg: angle,
+      kineticChainEfficiency: efficiency,
     },
     goodPoints: classification.goodPoints,
     badPoints: classification.badPoints,
     coachTips: classification.coachTips,
     analyzedAt: new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
     video,
+    isInvalidVideo: classification.isInvalidVideo,
   };
 }

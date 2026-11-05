@@ -54,7 +54,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
           name: asset.fileName || 'Opgenomen Badmintonslag',
           duration: asset.duration || 5,
           source: 'camera',
-          samplePreset: selectedPreset,
+          // Geen samplePreset: het echte computervisiemodel moet de video analyseren!
         });
       }
     } catch (error: any) {
@@ -96,7 +96,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartAnalysis }) => {
           name: asset.fileName || 'Geüploade Badmintonvideo',
           duration: asset.duration || 5,
           source: 'upload',
-          samplePreset: selectedPreset,
+          // Geen samplePreset: het echte computervisiemodel moet de video analyseren!
         });
       }
     } catch (error: any) {

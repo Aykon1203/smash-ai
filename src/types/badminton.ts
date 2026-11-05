@@ -11,7 +11,7 @@ export interface VideoInfo {
   thumbnailUri?: string;
 }
 
-export type ShotCategory = 'Smash' | 'Clear' | 'Drop' | 'Drive' | 'Netslag';
+export type ShotCategory = 'Smash' | 'Clear' | 'Drop' | 'Drive' | 'Netslag' | 'Niet Herkend';
 
 export type ShotKey = 
   | 'jump_smash'
@@ -22,7 +22,9 @@ export type ShotKey =
   | 'overhead_clear'
   | 'slice_drop'
   | 'net_kill'
-  | 'flat_drive';
+  | 'flat_drive'
+  | 'invalid_face_only'
+  | 'invalid_no_swing';
 
 export interface ShotPresetOption {
   key: ShotKey;
@@ -58,6 +60,7 @@ export interface ShotAnalysis {
   coachTips: string[];
   analyzedAt: string;
   video: VideoInfo;
+  isInvalidVideo?: boolean;
 }
 
 export interface AnalysisStage {

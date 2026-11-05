@@ -25,6 +25,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   onNavigateHome,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
+  const isInvalid = analysis.isInvalidVideo || analysis.shotCategory === 'Niet Herkend';
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -43,24 +44,51 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
+      {/* Waarschuwingsbanner bij ongeldige opname (bijv. enkel een gezicht) */}
+      {isInvalid && (
+        <View style={styles.warningBanner}>
+          <Ionicons name="alert-circle" size={20} color={Colors.warning} />
+          <View style={styles.warningBannerText}>
+            <Text style={styles.warningTitle}>Geen Badmintonslag Herkend</Text>
+            <Text style={styles.warningSub}>
+              De AI heeft geen zwaai of volledig lichaam gedetecteerd. Bekijk onderstaande instructies voor een juiste opname.
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* Bovensectie: Slag Header Kaart */}
-      <View style={styles.shotHeaderCard}>
+      <View style={[styles.shotHeaderCard, isInvalid && styles.cardInvalid]}>
         <View style={styles.cardGlow} />
 
         <View style={styles.categoryRow}>
-          <View style={styles.categoryBadge}>
-            <MaterialCommunityIcons name="badminton" size={14} color={Colors.primary} />
-            <Text style={styles.categoryBadgeText}>{analysis.shotCategory}</Text>
+          <View style={[styles.categoryBadge, isInvalid && styles.badgeInvalid]}>
+            <MaterialCommunityIcons
+              name={isInvalid ? 'alert-circle' : 'badminton'}
+              size={14}
+              color={isInvalid ? Colors.warning : Colors.primary}
+            />
+            <Text style={[styles.categoryBadgeText, isInvalid && { color: Colors.warning }]}>
+              {analysis.shotCategory}
+            </Text>
           </View>
 
           <View style={styles.scorePill}>
-            <Ionicons name="trophy" size={13} color={Colors.accentVolt} />
-            <Text style={styles.scoreText}>Techniek: {analysis.score}/100</Text>
+            <Ionicons
+              name={isInvalid ? 'help-circle' : 'trophy'}
+              size={13}
+              color={isInvalid ? Colors.textMuted : Colors.accentVolt}
+            />
+            <Text style={[styles.scoreText, isInvalid && { color: Colors.textMuted }]}>
+              {isInvalid ? 'Niet van toepassing' : `Techniek: ${analysis.score}/100`}
+            </Text>
           </View>
         </View>
 
         {/* Slagnaam & Samenvatting */}
-        <Text style={styles.shotTitle}>{analysis.shotName}</Text>
+        <Text style={[styles.shotTitle, isInvalid && { color: Colors.warning }]}>
+          {analysis.shotName}
+        </Text>
         <Text style={styles.shotTagline}>{analysis.tagline}</Text>
 
         <View style={styles.shotMetaRow}>
@@ -86,18 +114,18 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           <MetricCard
             iconName="speedometer"
             label="Geschatte Snelheid"
-            value={analysis.metrics.speedKmh}
+            value={isInvalid ? 0 : analysis.metrics.speedKmh}
             unit="km/u"
-            badge={analysis.metrics.speedKmh > 300 ? 'Elite' : 'Goed'}
-            accentColor={Colors.accentVolt}
+            badge={isInvalid ? 'Geen Slag' : analysis.metrics.speedKmh > 300 ? 'Elite' : 'Goed'}
+            accentColor={isInvalid ? Colors.textMuted : Colors.accentVolt}
           />
           <MetricCard
             iconName="trending-up"
             label="Raakpunthoogte"
-            value={analysis.metrics.contactHeightM}
-            unit="m"
-            badge="Piek"
-            accentColor={Colors.primary}
+            value={isInvalid ? '-' : analysis.metrics.contactHeightM}
+            unit={isInvalid ? '' : 'm'}
+            badge={isInvalid ? 'Geen' : 'Piek'}
+            accentColor={isInvalid ? Colors.textMuted : Colors.primary}
           />
         </View>
 
@@ -105,16 +133,16 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           <MetricCard
             iconName="navigate"
             label="Neerwaartse Hoek"
-            value={`${analysis.metrics.impactAngleDeg}°`}
-            badge="Steil"
-            accentColor={Colors.accentOrange}
+            value={isInvalid ? '-' : `${analysis.metrics.impactAngleDeg}°`}
+            badge={isInvalid ? 'Geen' : 'Steil'}
+            accentColor={isInvalid ? Colors.textMuted : Colors.accentOrange}
           />
           <MetricCard
             iconName="analytics"
             label="Kinetische Keten"
-            value={`${analysis.metrics.kineticChainEfficiency}%`}
-            badge="Vloeiend"
-            accentColor={Colors.accentBlue}
+            value={isInvalid ? '0%' : `${analysis.metrics.kineticChainEfficiency}%`}
+            badge={isInvalid ? 'Inactief' : 'Vloeiend'}
+            accentColor={isInvalid ? Colors.textMuted : Colors.accentBlue}
           />
         </View>
       </View>
@@ -122,29 +150,43 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       {/* GOEDE PUNTEN CONTAINER */}
       <FeedbackCard
         type="good"
-        title="Goede punten (Sterke techniek)"
-        subtitle="Belangrijke biomechanische aspecten die uitstekend werden uitgevoerd"
+        title={isInvalid ? 'Visuele Detectieresultaten' : 'Goede punten (Sterke techniek)'}
+        subtitle={
+          isInvalid
+            ? 'Elementen die succesvol door het computervisiemodel zijn herkend'
+            : 'Belangrijke biomechanische aspecten die uitstekend werden uitgevoerd'
+        }
         items={analysis.goodPoints}
       />
 
       {/* VERBETERPUNTEN CONTAINER */}
       <FeedbackCard
         type="bad"
-        title="Verbeterpunten (Aandachtspunten)"
-        subtitle="Cruciale technische aandachtspunten om direct aan te werken"
+        title={isInvalid ? 'Waarom Geen Slag Is Herkend' : 'Verbeterpunten (Aandachtspunten)'}
+        subtitle={
+          isInvalid
+            ? 'Vereisten voor een succesvolle badminton-slaganalyse'
+            : 'Cruciale technische aandachtspunten om direct aan te werken'
+        }
         items={analysis.badPoints}
       />
 
-      {/* Aanbevolen Trainer Oefeningen */}
+      {/* Aanbevolen Trainer Oefeningen of Richtlijnen */}
       {analysis.coachTips && analysis.coachTips.length > 0 && (
         <View style={styles.coachCard}>
           <View style={styles.coachHeader}>
             <View style={styles.coachIconCircle}>
-              <Ionicons name="school" size={18} color={Colors.primary} />
+              <Ionicons name={isInvalid ? 'bulb' : 'school'} size={18} color={Colors.primary} />
             </View>
             <View>
-              <Text style={styles.coachTitle}>Aanbevolen Trainingsvormen</Text>
-              <Text style={styles.coachSubtitle}>Gerichte oefeningen om de aandachtspunten te verhelpen</Text>
+              <Text style={styles.coachTitle}>
+                {isInvalid ? 'Richtlijnen Voor Een Goede Opname' : 'Aanbevolen Trainingsvormen'}
+              </Text>
+              <Text style={styles.coachSubtitle}>
+                {isInvalid
+                  ? 'Hoe je de camera moet opstellen voor een correcte AI-analyse'
+                  : 'Gerichte oefeningen om de aandachtspunten te verhelpen'}
+              </Text>
             </View>
           </View>
 
@@ -215,6 +257,31 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     paddingBottom: Spacing.xxl + 20,
   },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: 10,
+  },
+  warningBannerText: {
+    flex: 1,
+  },
+  warningTitle: {
+    color: Colors.warning,
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  warningSub: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+  },
   shotHeaderCard: {
     backgroundColor: Colors.surface,
     borderRadius: 20,
@@ -224,6 +291,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     position: 'relative',
     overflow: 'hidden',
+  },
+  cardInvalid: {
+    borderColor: 'rgba(245, 158, 11, 0.4)',
   },
   cardGlow: {
     position: 'absolute',
@@ -250,6 +320,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary,
     gap: 6,
+  },
+  badgeInvalid: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: Colors.warning,
   },
   categoryBadgeText: {
     color: Colors.primaryLight,
